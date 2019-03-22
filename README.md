@@ -1,5 +1,7 @@
 # Pact broker CLI
 
+[![Build Status](https://dev.azure.com/hmcts/CNP/_apis/build/status/ACR/CNP%20Pact%20broker%20cli?branchName=master)](https://dev.azure.com/hmcts/CNP/_build/latest?definitionId=113&branchName=master)
+
 This repo contains the source for the following image:
 
 | Name                               | Tag      | Size   |
