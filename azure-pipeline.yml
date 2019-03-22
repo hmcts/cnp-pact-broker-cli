@@ -1,0 +1,87 @@
+name: Pact broker client docker image
+
+trigger:
+  batch: true
+  branches:
+    include:
+      - master
+  paths:
+    exclude:
+      - README.md
+      - LICENCE.md
+      - Makefile
+
+pr:
+  - master
+
+variables:
+  azureContainerRegistry: hmcts.azurecr.io
+  azureSubscriptionEndpoint: azurerm-nonprod
+  vmImage: Ubuntu-16.04
+  imageName: hmcts/pact-broker-cli
+
+jobs:
+  - job: Build
+    pool:
+      vmImage: $(vmImage)
+    steps:
+      - task: Docker@1
+        displayName: Container registry login
+        inputs:
+          azureContainerRegistry: $(azureContainerRegistry)
+          azureSubscriptionEndpoint: $(azureSubscriptionEndpoint)
+          command: login
+
+      - task: Docker@1
+        displayName: Build image
+        inputs:
+          command: Build an image
+          azureContainerRegistry: $(azureContainerRegistry)
+          azureSubscriptionEndpoint: $(azureSubscriptionEndpoint)
+          imageName: $(azureContainerRegistry)/$(imageName):$(Build.SourceVersion)
+
+      - task: CmdLine@2
+        displayName: Test image
+        inputs:
+          failOnStderr: true
+          script: ./test.sh $(azureContainerRegistry)/$(imageName) $(Build.SourceVersion)
+
+      - task: Docker@1
+        displayName: Push image
+        inputs:
+          command: Push an image
+          azureSubscriptionEndpoint: azurerm-nonprod
+          azureContainerRegistry: hmcts.azurecr.io
+          imageName: $(azureContainerRegistry)/$(imageName):$(Build.SourceVersion)
+
+
+  - job: Release
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['build.sourceBranch'], 'refs/heads/master')) # Master branch only
+    pool:
+      vmImage: $(vmImage)
+    steps:
+      - task: Docker@1
+        displayName: Container registry login
+        inputs:
+          azureContainerRegistry: $(azureContainerRegistry)
+          azureSubscriptionEndpoint: $(azureSubscriptionEndpoint)
+          command: login
+      
+      - script: docker pull $(azureContainerRegistry)/$(imageName):$(Build.SourceVersion)
+        displayName: Pull tagged image
+      
+      - task: Docker@1
+        inputs:
+          command: Tag image
+          azureContainerRegistry: $(azureContainerRegistry)
+          azureSubscriptionEndpoint: $(azureSubscriptionEndpoint)
+          imageName: $(azureContainerRegistry)/$(imageName):$(Build.SourceVersion)
+          arguments: $(azureContainerRegistry)/$(imageName):latest
+      
+      - task: Docker@1
+        inputs:
+          command: Push an image
+          azureContainerRegistry: $(azureContainerRegistry)
+          azureSubscriptionEndpoint: $(azureSubscriptionEndpoint)
+          imageName: $(azureContainerRegistry)/$(imageName):latest
