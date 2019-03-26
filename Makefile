@@ -26,3 +26,9 @@ build-sandbox:
 	docker build \
 		-t $(.SANDBOX_REGISTRY)/$(.IMAGE_NAME) \
 		.
+
+.PHONY: dockerhub-build ## Build image for dockerbub hosted hmcts registry
+dockerhub-build:
+	docker build \
+		-t hmcts/$(.IMAGE_NAME) \
+		.
